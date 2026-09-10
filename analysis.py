@@ -460,9 +460,9 @@ plt.tight_layout()
 plt.savefig("sweep_gamma.png", dpi=150)
 plt.show()
 
-print("\ngamma sweep -- fixed-point speed v* (for reference, not plotted above):")
-for g, v in zip(slope_angles, v_star_vs_gamma):
-    print(f"  gamma={g:.3f}  v*={v:.4f}")
+#print("\ngamma sweep -- fixed-point speed v* (for reference, not plotted above):")
+#for g, v in zip(slope_angles, v_star_vs_gamma):
+#    print(f"  gamma={g:.3f}  v*={v:.4f}")
 
 spoke_counts = np.arange(6, 13)
 v_star_vs_N, multiplier_vs_N = sweep_parameter(
@@ -490,6 +490,6 @@ plt.tight_layout()
 plt.savefig("sweep_num_spokes.png", dpi=150)
 plt.show()
 
-print("\nN sweep -- fixed-point speed v* (for reference, not plotted above):")
-for N, v in zip(spoke_counts, v_star_vs_N):
-    print(f"  N={N:2d}  v*={v:.4f}")
+#print("\nN sweep -- fixed-point speed v* (for reference, not plotted above):")
+#for N, v in zip(spoke_counts, v_star_vs_N):
+#    print(f"  N={N:2d}  v*={v:.4f}")

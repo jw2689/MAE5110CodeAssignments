@@ -63,6 +63,6 @@ plt.title("Rimless wheel: total energy (dashed lines = impacts)")
 plt.tight_layout()
 plt.show()
 
-print(f"Number of impacts: {len(impact_times)}")
-if impact_velocities:
-    print("First few (pre, post) impact velocities:", impact_velocities[:5])
+#print(f"Number of impacts: {len(impact_times)}")
+#if impact_velocities:
+#    print("First few (pre, post) impact velocities:", impact_velocities[:5])
