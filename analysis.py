@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+from matplotlib.colors import ListedColormap
 
 from models import rimless_wheel as model
 from integrators import rk4 as integrator
@@ -206,120 +208,53 @@ def sweep_roa_fraction(param_values, make_params, **kwargs):
     return np.array([compute_roa_fraction(make_params(value), **kwargs) for value in param_values])
 
 
-# Limit cycle, with nearby trajectories converging onto it
-
+# Fixed point, needed by several plots below
 v_star = find_fixed_point(params)
 true_arc, true_pre, true_post = simulate_one_period(
     np.array([post_impact_angle, v_star]), params
 )
 
 
-def simulate_n_loops(initial_velocity, params, n_loops=5):
-    state = np.array([post_impact_angle, initial_velocity])
-    loops = []
-    for _ in range(n_loops):
-        loop_arc, pre_impact_state, post_impact_state = simulate_one_period(state, params)
-        loops.append((loop_arc, pre_impact_state, post_impact_state))
-        state = post_impact_state
-    return loops
-
-
-starting_velocities = [1.0, 1.4, 2.2, 2.6]
-colors = ["tab:blue", "tab:green", "tab:orange", "tab:purple"]
-
-plt.figure(figsize=(8, 7))
-for v0, color in zip(starting_velocities, colors):
-    loops = simulate_n_loops(v0, params, n_loops=5)
-    n_loops = len(loops)
-    for i, (loop_arc, loop_pre, loop_post) in enumerate(loops):
-        alpha_i = 0.25 + 0.75 * (i + 1) / n_loops
-        lw = 1.0 + 1.5 * (i + 1) / n_loops
-        plt.plot(loop_arc[:, 0], loop_arc[:, 1], color=color, alpha=alpha_i, linewidth=lw)
-        plt.plot([loop_pre[0], loop_post[0]], [loop_pre[1], loop_post[1]],
-                  "--", color=color, alpha=alpha_i * 0.7, linewidth=1)
-    plt.plot(post_impact_angle, v0, "o", color=color, markersize=8, zorder=5,
-              label=f"start v₀={v0}")
-
-plt.plot(true_arc[:, 0], true_arc[:, 1], color="black", linewidth=2.5,
-          label=f"limit cycle (v*={v_star:.3f})", zorder=4)
-plt.plot([true_pre[0], true_post[0]], [true_pre[1], true_post[1]], "k--", linewidth=1.5, zorder=4)
-
-plt.xlabel("Stance angle θ (rad)")
-plt.ylabel("Stance angular velocity θ̇ (rad/s)")
-plt.title(f"Limit cycle with nearby trajectories converging (γ={gamma:.2f} rad, N={params['num_spokes']})")
-plt.legend(loc="lower right", fontsize=9)
-plt.tight_layout()
-plt.savefig("limit_cycle_convergence.png", dpi=150)
-plt.show()
-
-
-#Region of attraction: streamlines of the continuous flow, the analytic
-# separatrix, the empirically simulated RoA boundary, and the limit cycle --
-# all overlaid, restricted to the domain actually simulated.
+# ---------------------------------------------------------------------------
+# Region of attraction: red/blue grid classification, with a legend
+# (not a colorbar), plus the limit cycle overlaid on top.
+# ---------------------------------------------------------------------------
 
 theta_range = (gamma - alpha, alpha + gamma)
 theta_dot_range = (-4.0, 4.0)
 
-# plot only within the domain the RoA boundary was actually simulated over --
-# showing anything wider just introduces mismatched-domain artifacts
-theta_plot_range = theta_range
-
-grid_n = 300
-theta_grid = np.linspace(*theta_plot_range, grid_n)
-theta_dot_grid = np.linspace(*theta_dot_range, grid_n)
-Theta, ThetaDot = np.meshgrid(theta_grid, theta_dot_grid)
-
-# continuous vector field (swing dynamics only -- streamlines can't show the
-# instantaneous impact jump, only the smooth flow between impacts)
-U = ThetaDot
-V = (params["gravity"] / params["spoke_length"]) * np.sin(Theta)
-
-# specific energy: E = 0.5*theta_dot^2 + (g/l)*cos(theta), CONSERVED along
-# the continuous flow, so its contours coincide with the streamlines --
-# used here as the background scalar field
-Energy = 0.5 * ThetaDot**2 + (params["gravity"] / params["spoke_length"]) * np.cos(Theta)
-separatrix_energy = params["gravity"] / params["spoke_length"]  # energy needed to just reach theta=0
-
-# empirically simulated RoA boundary, from the brute-force grid classification
 theta_vals, theta_dot_vals, classification = compute_roa_grid(
-    params, theta_range, theta_dot_range, grid_size=50
+    params, theta_range, theta_dot_range, grid_size=40
 )
-'''
-plt.figure(figsize=(8, 7))
 
-plt.streamplot(theta_grid, theta_dot_grid, U, V, color="black", density=1.3,
-                linewidth=0.6, arrowsize=0.8)
+roa_cmap = ListedColormap(["tab:blue", "tab:red"])
 
-# analytic separatrix: the energy level that's just barely enough to clear
-# theta=0, derived by hand from energy conservation
-plt.contour(Theta, ThetaDot, Energy, levels=[separatrix_energy],
-            colors="orange", linewidths=2.5, linestyles="--")
-plt.plot([], [], color="orange", linewidth=2.5, linestyle="--",
-          label="Analytic separatrix (energy threshold)")
+plt.figure(figsize=(7, 5))
+plt.pcolormesh(theta_vals, theta_dot_vals, classification, shading="auto", cmap=roa_cmap)
 
-# empirically simulated RoA boundary
-plt.contour(theta_vals, theta_dot_vals, classification, levels=[0.5],
-            colors="limegreen", linewidths=2.5)
-plt.plot([], [], color="limegreen", linewidth=2.5, label="Simulated RoA boundary")
+#plotting the limit cycle on this
+#plt.plot(true_arc[:, 0], true_arc[:, 1], color="black", linewidth=2.5, zorder=5,
+#          label=f"Limit cycle (v*={v_star:.3f})")
+#plt.plot([true_pre[0], true_post[0]], [true_pre[1], true_post[1]],
+#          "k--", linewidth=1.5, zorder=5)
 
-# the limit cycle itself
-plt.plot(true_arc[:, 0], true_arc[:, 1], color="black", linewidth=2.5, zorder=5,
-          label=f"Limit cycle (v*={v_star:.3f})")
-plt.plot([true_pre[0], true_post[0]], [true_pre[1], true_post[1]],
-          "k--", linewidth=1.5, zorder=5)
-
-plt.xlim(*theta_plot_range)
-plt.ylim(*theta_dot_range)
 plt.xlabel("Stance angle θ (rad)")
 plt.ylabel("Stance angular velocity θ̇ (rad/s)")
 plt.title(f"Region of attraction (γ={gamma:.2f} rad, N={params['num_spokes']})")
-plt.legend(loc="lower right", fontsize=9)
+legend_handles = [
+    Patch(facecolor="tab:red", label="Stable (converges to limit cycle)"),
+    Patch(facecolor="tab:blue", label="Unstable (stalled)"),
+    #Line2D([0], [0], color="black", lw=2.5, label=f"Limit cycle (v*={v_star:.3f})"),
+]
+plt.legend(handles=legend_handles, loc="upper right", fontsize=9)
 plt.tight_layout()
 plt.savefig("roa.png", dpi=150)
-plt.show()'''
+plt.show()
 
 
+# ---------------------------------------------------------------------------
 # Simulate every grid point, trace its full path, color by convergence
+# ---------------------------------------------------------------------------
 
 def simulate_dense_path(initial_state, params, timestep=2e-3, sim_time=6.0):
     """Integrate continuously (fixed timestep, linear-interpolation reset)
@@ -346,7 +281,7 @@ def simulate_dense_path(initial_state, params, timestep=2e-3, sim_time=6.0):
 
     return state_traj
 
-
+'''
 grid_size = 8  # kept modest since every point draws a full traced path
 theta_starts = np.linspace(*theta_range, grid_size)
 theta_dot_starts = np.linspace(*theta_dot_range, grid_size)
@@ -395,7 +330,7 @@ legend_handles = [
 plt.legend(handles=legend_handles, loc="upper right", fontsize=9)
 plt.tight_layout()
 plt.savefig("roa_traced_paths.png", dpi=150)
-plt.show()
+plt.show()'''
 
 # 1D Poincare return map, fixed point clearly labelled
 
@@ -448,7 +383,9 @@ axes[0].set_ylim(0, 100)
 axes[0].set_title("Region of attraction coverage vs. slope (N=8)")
 no_gait = roa_fraction_vs_gamma == 0
 #if no_gait.any():
-#    axes[0].annotate("no rolling gait exists here", xy=(gamma_subset[no_gait][0], 2), xytext=(gamma_subset[no_gait][0] + 0.05, 20), arrowprops=dict(arrowstyle="->", color="black"), fontsize=8)
+##    axes[0].annotate("no rolling gait exists here", xy=(gamma_subset[no_gait][0], 2),
+ #                     xytext=(gamma_subset[no_gait][0] + 0.05, 20),
+#                      arrowprops=dict(arrowstyle="->", color="black"), fontsize=8)
 
 axes[1].plot(slope_angles, multiplier_vs_gamma, "o-")
 axes[1].axhline(1, color="gray", linestyle="--")
@@ -460,9 +397,9 @@ plt.tight_layout()
 plt.savefig("sweep_gamma.png", dpi=150)
 plt.show()
 
-#print("\ngamma sweep -- fixed-point speed v* (for reference, not plotted above):")
-#for g, v in zip(slope_angles, v_star_vs_gamma):
-#    print(f"  gamma={g:.3f}  v*={v:.4f}")
+print("\ngamma sweep -- fixed-point speed v* (for reference, not plotted above):")
+for g, v in zip(slope_angles, v_star_vs_gamma):
+    print(f"  gamma={g:.3f}  v*={v:.4f}")
 
 spoke_counts = np.arange(6, 13)
 v_star_vs_N, multiplier_vs_N = sweep_parameter(
@@ -490,6 +427,6 @@ plt.tight_layout()
 plt.savefig("sweep_num_spokes.png", dpi=150)
 plt.show()
 
-#print("\nN sweep -- fixed-point speed v* (for reference, not plotted above):")
-#for N, v in zip(spoke_counts, v_star_vs_N):
-#    print(f"  N={N:2d}  v*={v:.4f}")
+print("\nN sweep -- fixed-point speed v* (for reference, not plotted above):")
+for N, v in zip(spoke_counts, v_star_vs_N):
+    print(f"  N={N:2d}  v*={v:.4f}")
