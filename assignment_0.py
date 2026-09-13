@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import timeit
 
 from models import pendulum as model
-
+from integrators import rk4 as integrator
 # Basic simulation of the pendulum
 
 params = {
@@ -16,7 +17,7 @@ params = {
 # some set-up
 initial_state = np.array([np.pi / 4, 0.0])
 
-timestep = 1e-5
+timestep = 1e-2
 sim_time = 5.0
 
 n_timesteps = int(sim_time / timestep) + 1
@@ -24,11 +25,17 @@ time_traj = np.arange(n_timesteps) * timestep
 state_traj = np.zeros((2, n_timesteps))
 state_traj[:, 0] = initial_state
 
-# simulation loop
-for step, t in enumerate(time_traj[:-1]):
-    state_traj[:, step + 1] = state_traj[:, step] + timestep * model.dynamics(
-        t, state_traj[:, step], params
-    )
+def sim():
+    for step, t in enumerate(time_traj[:-1]):
+        state_traj[:, step + 1] = integrator(
+            model.dynamics, t, state_traj[:, step], params, timestep
+        )
+
+elapsed = timeit.timeit(sim, number=20)
+avg_time = elapsed / 20
+
+print(f"Av execution time: {avg_time:.6f}s")
+
 
 # sanity check the energies: since there is no actuation, and no damping, total energy should stay
 # constant. If we turn on the damping coefficient, it should slowly bleed out energy until it comes to
@@ -47,4 +54,13 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
-# TODO: make a phase portrait plot
+# Phase portrait plot
+plt.figure()
+plt.plot(state_traj[0, :], state_traj[1, :], label="Phase Trajectory")
+plt.scatter(initial_state[0], initial_state[1], color="red", zorder=5, label="Start")
+plt.xlabel("Position $\\theta$ (rad) x")
+plt.ylabel("Velocity $\\dot{\\theta}$ (rad/s) f(x)")
+plt.title("Pendulum Phase Portrait")
+plt.legend()
+plt.tight_layout()
+plt.show()
