@@ -87,7 +87,17 @@ def simulate_one_period(state, params, dense_timestep=1e-3):
 
 def classify_initial_condition(state, params, max_impacts=20, **kwargs):
     """'rolling' if it keeps impacting for max_impacts steps (converging to
-    the limit cycle), 'stalled' if it ever fails to reach the guard."""
+    the limit cycle).
+
+    'stalled' if it ever fails to reach the guard within max_time on some
+    step -- but note this is a SEARCH-HORIZON TIMEOUT, not proof of
+    convergence to a resting equilibrium. This model has no guard for the
+    trailing spoke, so there is no code path here that actually detects a
+    genuine resting attractor; a trajectory classified 'stalled' has merely
+    failed to complete another forward step within the time/impact budget
+    given, which is a different (weaker) claim than "this state is a stable
+    rest point." Do not read 'stalled' as 'unstable' or 'at rest' -- it only
+    means 'did not roll, within the search budget used here.'"""
     t = 0.0
     for _ in range(max_impacts):
         result = step_to_next_impact(t, state, params, **kwargs)
@@ -242,8 +252,8 @@ plt.xlabel("Stance angle θ (rad)")
 plt.ylabel("Stance angular velocity θ̇ (rad/s)")
 plt.title(f"Region of attraction (γ={gamma:.2f} rad, N={params['num_spokes']})")
 legend_handles = [
-    Patch(facecolor="tab:red", label="Stable (converges to limit cycle)"),
-    Patch(facecolor="tab:blue", label="Unstable (stalled)"),
+    Patch(facecolor="tab:red", label="Stable"),
+    Patch(facecolor="tab:blue", label="Unstable"),
     #Line2D([0], [0], color="black", lw=2.5, label=f"Limit cycle (v*={v_star:.3f})"),
 ]
 plt.legend(handles=legend_handles, loc="upper right", fontsize=9)
@@ -324,13 +334,49 @@ plt.title(f"Simulated trajectories from every grid point (γ={gamma:.2f} rad, N=
 
 legend_handles = [
     Line2D([0], [0], color="tab:red", lw=2, label="Converges to limit cycle"),
-    Line2D([0], [0], color="tab:blue", lw=2, label="Does not converge"),
+    Line2D([0], [0], color="tab:blue", lw=2, label="Non-rolling (times out -- not a proven resting attractor)"),
     Line2D([0], [0], color="black", lw=2.5, label="Limit cycle"),
 ]
 plt.legend(handles=legend_handles, loc="upper right", fontsize=9)
 plt.tight_layout()
 plt.savefig("roa_traced_paths.png", dpi=150)
 plt.show()'''
+
+
+# ---------------------------------------------------------------------------
+# RoA comparison: three slopes side by side, then three spoke counts
+# Same red/blue coding as the main RoA plot above: red = rolling, blue =
+# non-rolling (timed out within the search budget -- not a proven resting
+# attractor; see classify_initial_condition's docstring for why).
+# ---------------------------------------------------------------------------
+
+fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
+for ax, g in zip(axes, [0.1, 0.2, 0.4]):
+    p = model.generate_params(num_spokes=8, slope_angle=g)
+    a = p["half_spoke_angle"]
+    t_vals, td_vals, cls = compute_roa_grid(p, (g - a, a + g), (-4.0, 4.0), grid_size=40)
+    ax.pcolormesh(t_vals, td_vals, cls, shading="auto", cmap=roa_cmap)
+    ax.set_xlabel("θ (rad)")
+    ax.set_ylabel("θ̇ (rad/s)")
+    ax.set_title(f"γ={g:.2f} rad (N=8)")
+plt.tight_layout()
+plt.savefig("roa_vs_gamma.png", dpi=150)
+plt.show()
+
+fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
+for ax, N in zip(axes, [6, 8, 12]):
+    p = model.generate_params(num_spokes=N, slope_angle=0.2)
+    a = p["half_spoke_angle"]
+    g = p["slope_angle"]
+    t_vals, td_vals, cls = compute_roa_grid(p, (g - a, a + g), (-4.0, 4.0), grid_size=40)
+    ax.pcolormesh(t_vals, td_vals, cls, shading="auto", cmap=roa_cmap)
+    ax.set_xlabel("θ (rad)")
+    ax.set_ylabel("θ̇ (rad/s)")
+    ax.set_title(f"N={N} (γ=0.2 rad)")
+plt.tight_layout()
+plt.savefig("roa_vs_N.png", dpi=150)
+plt.show()
+
 
 # 1D Poincare return map, fixed point clearly labelled
 
