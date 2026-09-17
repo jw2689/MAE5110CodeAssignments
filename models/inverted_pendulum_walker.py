@@ -9,24 +9,60 @@ import numpy as np
 
 
 def generate_params():
-    pass
+    return {
+        "gravity": 9.81,
+        "length": 1.0,
+        "mass": 1.0,
+        "incline": 0.06,
+        "angle_of_attack": np.deg2rad(20),  # your initial guess, within [pi/8, pi/7]
+        "ankle_torque": 0.0,
+    }
 
 
 def dynamics(t, state, params):
-    # TODO: implement the state derivative.
-    return np.array([0.0, 0.0])
+    theta, theta_dot = state
+    g = params["gravity"]
+    length = params["length"]
+    mass = params["mass"]
+    torque = params.get("ankle_torque", 0.0)
+
+    theta_ddot = (g / length) * np.sin(theta) + torque / (mass * length**2)
+
+    return np.array([theta_dot, theta_ddot])
 
 
 def event_guard(previous_state, next_state, params):
-    pass
+    """True if a touchdown occurred between previous_state and next_state."""
+    alpha = params["angle_of_attack"]
+    gamma = params["incline"]
+
+    guard_prev = previous_state[0] - (alpha + gamma)
+    guard_next = next_state[0] - (alpha + gamma)
+
+    return guard_prev < 0 and guard_next >= 0
 
 
 def event_dynamics(state, params):
-    pass
+    """Impact map: switch stance leg, conserve angular momentum about the
+    new contact point."""
+    alpha = params["angle_of_attack"]
+    gamma = params["incline"]
+    theta, theta_dot = state
+
+    new_theta = 2 * gamma - theta
+    new_theta_dot = theta_dot * np.cos(2 * alpha)
+
+    return np.array([new_theta, new_theta_dot])
 
 
 def calculate_energy(state, params):
-    pass
+    gravity = params["gravity"]
+    length = params["length"]
+    theta, theta_dot = state
+
+    kinetic_energy = 0.5 * (length * theta_dot) ** 2
+    potential_energy = gravity * length * np.cos(theta)
+    return kinetic_energy, potential_energy
 
 
 def visualize(
