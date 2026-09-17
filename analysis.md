@@ -1,5 +1,6 @@
 # Assignment 2: Inverted Pendulum Walker — Report
-
+## Sketch
+![Model Sketch](sketch_a2.png)
 ## Region of Attraction
 
 The ankle controller combines feedback linearization (to cancel the
@@ -9,7 +10,7 @@ $$\tau = m\ell^2\left(-k_p\theta - k_d\dot\theta - \frac{g}{\ell}\sin\theta\righ
 
 with gains $k_p = 9$, $k_d = 6$ (chosen by trial and error for a smooth but
 not overly damped response). The region of attraction was found by a grid
-search over $\theta,\dot\theta \in [-0.2, 0.2]$ (kept small and focused, per
+search over $\theta \in [-0.5, 0.5]$ (kept small and focused, per
 the assignment's guidance), simulating each starting point for 5 seconds
 and checking convergence to the origin:
 

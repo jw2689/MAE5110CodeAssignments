@@ -362,9 +362,9 @@ def build_max_steps_table(table, alpha_actions=None, step_cap=25):
 
 
 # --- Compute the region of attraction ---
-N = 20
-theta_grid = np.linspace(-0.2, 0.2, N)
-theta_dot_grid = np.linspace(-0.2, 0.2, N)
+N = 30
+theta_grid = np.linspace(-0.5, 0.5, N)
+theta_dot_grid = np.linspace(-0.5, 1, N)
 roa_mask = np.zeros((N, N), dtype=bool)
 for i, th in enumerate(theta_grid):
     for j, thd in enumerate(theta_dot_grid):
