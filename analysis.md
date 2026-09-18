@@ -1,7 +1,7 @@
 # Assignment 2: Inverted Pendulum Walker — Report
 
 ## Sketch
-![Model Sketch](sketch_a2.png)
+![Model Sketch](sketch_a2.jpg)
 
 ## Region of Attraction
 
