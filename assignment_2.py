@@ -402,9 +402,16 @@ print("CONTROL AS A LOOKUP TABLE")
 print("=" * 70)
 
 froude_2_theta_dot = np.sqrt(2 * params["gravity"] / params["length"])
-test_theta_dots = np.array([0.5, 1.5, 2.5, 3.5])  # spread across [0, ~4.43] rad/s
 
-reference_table = build_lookup_table(35, 21, params, roa_lookup)
+# Dense set of probe velocities (not just a handful) spanning the whole
+# reachable range. A small, arbitrarily-chosen set of test points can make
+# a coarse grid look "good enough" purely by luck -- nearest-grid-point
+# lookup makes the policy a step function, so a few probe points can
+# happen to land in favorable cells even when the table is genuinely too
+# coarse elsewhere. Testing against many points averages that luck out.
+test_theta_dots = np.linspace(0.3, froude_2_theta_dot * 0.95, 15)
+
+reference_table = build_lookup_table(35, 35, params, roa_lookup)
 reference_steps = {
     td: simulate_policy(td, reference_table, params, roa_lookup) for td in test_theta_dots
 }
@@ -418,7 +425,7 @@ def steps_match(a, b, tol=STEP_TOLERANCE):
         return a == b
     return abs(a - b) <= tol
 
-candidate_sizes = [(6, 4), (9, 6), (12, 7), (15, 9), (20, 12), (25, 15)]
+candidate_sizes = [(3, 3), (4, 4), (6, 6), (9, 9), (12, 12), (15, 15), (20, 20), (25, 25)]
 chosen_MK = None
 resolution_results = []
 
@@ -446,18 +453,40 @@ else:
               f"{ {f'{td:.2f}': n for td, n in reference_steps.items()} } -- "
               "confirming that resolution is NOT fine enough.")
 
-fig_res, ax_res = plt.subplots(figsize=(7, 5), layout="constrained")
-for td in test_theta_dots:
-    sizes = [M_c for M_c, K_c, _, _ in resolution_results]
-    steps_series = [steps[td] if steps[td] is not None else np.nan
-                    for _, _, steps, _ in resolution_results]
-    ax_res.plot(sizes, steps_series, "o-", label=fr"$\dot\theta_0$={td:.2f} rad/s")
-    ax_res.axhline(reference_steps[td], color="gray", linestyle=":", linewidth=1)
-ax_res.axvline(chosen_MK[0], color="red", linestyle="--", label=f"Chosen M={chosen_MK[0]}")
-ax_res.set_xlabel("Grid size M (state axis); dotted lines = reference step count")
-ax_res.set_ylabel("Simulated steps to standstill")
-ax_res.set_title("Grid resolution study: convergence to reference")
-ax_res.legend(fontsize=8)
+n_probes = len(test_theta_dots)
+sizes = [M_c for M_c, K_c, _, _ in resolution_results]
+n_matching = [
+    sum(steps_match(steps[td], reference_steps[td]) for td in test_theta_dots)
+    for _, _, steps, _ in resolution_results
+]
+max_deviation = []
+for _, _, steps, _ in resolution_results:
+    devs = [
+        abs(steps[td] - reference_steps[td])
+        for td in test_theta_dots
+        if steps[td] is not None and reference_steps[td] is not None
+    ]
+    max_deviation.append(max(devs) if devs else np.nan)
+
+fig_res, (ax_count, ax_dev) = plt.subplots(1, 2, figsize=(12, 5), layout="constrained")
+
+ax_count.plot(sizes, n_matching, "o-", color="#23699b")
+ax_count.axhline(n_probes, color="gray", linestyle=":", linewidth=1, label=f"All {n_probes} probes")
+ax_count.axvline(chosen_MK[0], color="red", linestyle="--", label=f"Chosen M={chosen_MK[0]}")
+ax_count.set_xlabel("Grid size M (state axis)")
+ax_count.set_ylabel(f"Probe points matching reference (of {n_probes})")
+ax_count.set_title("Grid resolution study:\nhow many of 15 probe velocities agree with reference")
+ax_count.set_ylim(0, n_probes + 1)
+ax_count.legend(fontsize=8)
+
+ax_dev.plot(sizes, max_deviation, "o-", color="#df8a25")
+ax_dev.axhline(STEP_TOLERANCE, color="gray", linestyle=":", linewidth=1, label=f"Tolerance ({STEP_TOLERANCE} step)")
+ax_dev.axvline(chosen_MK[0], color="red", linestyle="--", label=f"Chosen M={chosen_MK[0]}")
+ax_dev.set_xlabel("Grid size M (state axis)")
+ax_dev.set_ylabel("Largest step-count deviation from reference")
+ax_dev.set_title("Worst-case deviation across all 15 probes")
+ax_dev.legend(fontsize=8)
+
 fig_res.savefig(output / "grid_resolution_study.png", dpi=150)
 plt.show()
 
@@ -532,14 +561,10 @@ candidates_ge3 = [i for i in range(M) if np.isfinite(steps_to_standstill[i]) and
 if not candidates_ge3:
     raise RuntimeError("No grid state reaches standstill in >= 3 steps -- widen the state grid.")
 
-# Chosen for a clear, illustrative plot: this is the Froude-2 bound itself,
-# where the optimal (fewest-steps) and maximally-delaying policies pick
-# DIFFERENT alpha on the very first footstep, so the two trajectories
-# diverge immediately (4 steps vs 7 steps) instead of overlapping for a
-# while first. Any grid state with steps_to_standstill >= 3 would satisfy
-# the assignment's requirement; this one was picked because it makes the
-# two-policy comparison plot much easier to read.
-example_theta_dot0 = froude_2_theta_dot
+# theta_dot_0 = 3.5 gives a real optimal step count of 4 -- comfortably
+# above the ">= 3 steps" requirement with margin, rather than landing
+# right at the minimum.
+example_theta_dot0 = 3.5
 example_idx = int(np.argmin(np.abs(theta_dot_states - example_theta_dot0)))
 print(f"Chosen initial condition: theta_dot_0 = {example_theta_dot0:.3f} rad/s "
       f"(optimal policy: {int(steps_to_standstill[example_idx])} steps)")
