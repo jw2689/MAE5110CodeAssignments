@@ -34,10 +34,15 @@ def compute_ankle_torque(state, params):
 
 
 def in_roa(theta0, theta_dot0, params, sim_time=5.0, dt=1e-3, tol=1e-2):
+    """Note: works on a local copy of params, not the caller's dict --
+    otherwise every call would mutate the shared params object's
+    ankle_torque in place, which is fragile for the grid search calling
+    this in a loop (per review comment)."""
+    local_params = dict(params)
     state = np.array([theta0, theta_dot0])
     for _ in range(int(sim_time / dt)):
-        params["ankle_torque"] = compute_ankle_torque(state, params)
-        state = integrator(model.dynamics, 0, state, params, dt)
+        local_params["ankle_torque"] = compute_ankle_torque(state, local_params)
+        state = integrator(model.dynamics, 0, state, local_params, dt)
     return np.linalg.norm(state) < tol
 
 
