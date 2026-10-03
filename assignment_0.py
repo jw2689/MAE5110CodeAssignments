@@ -11,6 +11,7 @@ params = {
     "length": 1,  # rod length (m)
     "mass": 0.2,  # point mass at end of rod (kg)
     "damping_coeff": 0.0,  # damping coefficient (kg*m^2/s)
+    "torque": 0.0,  # torque (Nm)
 }
 
 
@@ -28,7 +29,7 @@ state_traj[:, 0] = initial_state
 def sim():
     for step, t in enumerate(time_traj[:-1]):
         state_traj[:, step + 1] = integrator(
-            model.dynamics, t, state_traj[:, step], params, timestep
+            model.dynamics, t, state_traj[:, step], timestep, params
         )
 
 elapsed = timeit.timeit(sim, number=20)

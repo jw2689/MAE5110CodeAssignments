@@ -1,5 +1,18 @@
-from . import pendulum
-from . import bouncing_ball
-from . import rimless_wheel
+# For more about init files, see https://realpython.com/python-init-py/
+# and https://medium.com/data-science/whats-init-for-me-d70a312da583
 
-__all__ = ["pendulum", "bouncing_ball", "rimless_wheel"]
+from . import (
+    bouncing_ball,
+    compass_gait,
+    inverted_pendulum_walker,
+    pendulum,
+    rimless_wheel,
+)
+
+__all__ = [
+    "bouncing_ball",
+    "compass_gait",
+    "inverted_pendulum_walker",
+    "pendulum",
+    "rimless_wheel",
+]

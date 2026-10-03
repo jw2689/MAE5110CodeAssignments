@@ -21,14 +21,14 @@ def step_to_next_impact(t0, state0, params, coarse_timestep=2e-2, max_time=8.0):
     elapsed = 0.0
 
     while elapsed < max_time:
-        next_state = integrator(model.compute_state_derivative, t, state, params, coarse_timestep)
+        next_state = integrator(model.dynamics, t, state, coarse_timestep, params)
         guard_next = model.detect_impact(next_state, params)
 
         if guard_prev < 0 and guard_next >= 0:
             low, high = 0.0, coarse_timestep
             for _ in range(50):
                 mid = 0.5 * (low + high)
-                candidate = integrator(model.compute_state_derivative, t, state, params, mid)
+                candidate = integrator(model.dynamics, t, state, mid, params)
                 guard_mid = model.detect_impact(candidate, params)
                 if abs(guard_mid) < 1e-10:
                     break
@@ -55,14 +55,14 @@ def simulate_one_period(state, params, dense_timestep=1e-3):
     guard_prev = model.detect_impact(state, params)
 
     while True:
-        next_state = integrator(model.compute_state_derivative, t, state, params, dense_timestep)
+        next_state = integrator(model.dynamics, t, state, dense_timestep, params)
         guard_next = model.detect_impact(next_state, params)
 
         if guard_prev < 0 and guard_next >= 0:
             low, high = 0.0, dense_timestep
             for _ in range(50):
                 mid = 0.5 * (low + high)
-                candidate = integrator(model.compute_state_derivative, t, state, params, mid)
+                candidate = integrator(model.dynamics, t, state, mid, params)
                 guard_mid = model.detect_impact(candidate, params)
                 if abs(guard_mid) < 1e-12:
                     break
@@ -277,7 +277,7 @@ def simulate_dense_path(initial_state, params, timestep=2e-3, sim_time=6.0):
     for step in range(n_steps - 1):
         t = step * timestep
         prev_state = state_traj[:, step]
-        next_state = integrator(model.compute_state_derivative, t, prev_state, params, timestep)
+        next_state = integrator(model.dynamics, t, prev_state, timestep, params)
 
         guard_prev = model.detect_impact(prev_state, params)
         guard_next = model.detect_impact(next_state, params)

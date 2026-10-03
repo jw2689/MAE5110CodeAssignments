@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def compute_state_derivative(t, state, params):
+def dynamics(t, state, params):
     """Continuous (single-stance) dynamics: identical to an inverted pendulum.
 
     Note: independent of slope angle gamma -- gravity is fixed in the world
@@ -19,7 +19,7 @@ def compute_state_derivative(t, state, params):
     return np.array([stance_angular_velocity, angular_acceleration])
 
 
-def generate_params(num_spokes, slope_angle):
+def generate_params(num_spokes=8, slope_angle=0.2):
     return {
         "gravity": 9.81,  # gravity (m/s^2)
         "spoke_length": 1,  # spoke length l (m)
@@ -27,6 +27,11 @@ def generate_params(num_spokes, slope_angle):
         "half_spoke_angle": np.pi / num_spokes,  # alpha = pi / N
         "slope_angle": slope_angle,  # gamma (radians), downhill incline
     }
+
+
+def generate_initial_condition():
+    """Just after an impact (theta = gamma - alpha for the defaults), rolling forward."""
+    return np.array([0.2 - np.pi / 8, 1.0])
 
 
 def detect_impact(state, params):

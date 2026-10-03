@@ -19,6 +19,11 @@ def generate_params():
     }
 
 
+def generate_initial_condition():
+    """Upright at the start of a step, moving forward (matches assignment_2.py)."""
+    return np.array([0.0, 3.0])
+
+
 def dynamics(t, state, params):
     theta, theta_dot = state
     g = params["gravity"]

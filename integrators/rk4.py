@@ -1,4 +1,4 @@
-def rk4(dynamics, t, state, params, timestep):
+def rk4(dynamics, t, state, timestep, params):
     k1 = dynamics(t, state, params)
     k2 = dynamics(t + timestep / 2, state + timestep / 2 * k1, params)
     k3 = dynamics(t + timestep / 2, state + timestep / 2 * k2, params)
