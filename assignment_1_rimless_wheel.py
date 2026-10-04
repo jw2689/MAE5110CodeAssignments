@@ -21,7 +21,7 @@ impact_velocities = []  # (pre-impact, post-impact) angular velocity pairs
 
 for step, t in enumerate(time_traj[:-1]):
     prev_state = state_traj[:, step]
-    next_state = integrator(model.compute_state_derivative, t, prev_state, params, timestep)
+    next_state = integrator(model.dynamics, t, prev_state, timestep, params)
 
     guard_prev = model.detect_impact(prev_state, params)
     guard_next = model.detect_impact(next_state, params)

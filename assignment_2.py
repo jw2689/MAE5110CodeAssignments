@@ -42,7 +42,7 @@ def in_roa(theta0, theta_dot0, params, sim_time=5.0, dt=1e-3, tol=1e-2):
     state = np.array([theta0, theta_dot0])
     for _ in range(int(sim_time / dt)):
         local_params["ankle_torque"] = compute_ankle_torque(state, local_params)
-        state = integrator(model.dynamics, 0, state, local_params, dt)
+        state = integrator(model.dynamics, 0, state, dt, local_params)
     return np.linalg.norm(state) < tol
 
 
@@ -96,7 +96,7 @@ def simulate_one_step(theta_dot_k, alpha, params, roa_lookup, dt=1e-3, max_time=
     # Phase 1: swing forward to touchdown.
     post_impact_state = None
     for _ in range(n_steps):
-        next_state = integrator(model.dynamics, 0, state, step_params, dt)
+        next_state = integrator(model.dynamics, 0, state, dt, step_params)
         if model.event_guard(state, next_state, step_params):
             alpha_g = step_params["angle_of_attack"]
             gamma = step_params["incline"]
@@ -121,7 +121,7 @@ def simulate_one_step(theta_dot_k, alpha, params, roa_lookup, dt=1e-3, max_time=
     # the state may pass through the RoA partway through this swing.
     state = post_impact_state
     for _ in range(n_steps):
-        next_state = integrator(model.dynamics, 0, state, step_params, dt)
+        next_state = integrator(model.dynamics, 0, state, dt, step_params)
         if roa_lookup(next_state):
             return post_impact_state, None, True
         if section_guard(state, next_state, step_params):
@@ -262,7 +262,7 @@ def simulate_policy_trajectory(theta_dot0, alpha_sequence_fn, params, roa_lookup
         post_impact_state = None
         # Phase 1: swing to touchdown.
         for _ in range(n_phase_steps):
-            next_state = integrator(model.dynamics, 0, state, step_params, dt)
+            next_state = integrator(model.dynamics, 0, state, dt, step_params)
             t_clock += dt
             t_all.append(t_clock)
             state_all.append(next_state)
@@ -288,7 +288,7 @@ def simulate_policy_trajectory(theta_dot0, alpha_sequence_fn, params, roa_lookup
         state = post_impact_state
         reached_mid_phase2 = False
         for _ in range(n_phase_steps):
-            next_state = integrator(model.dynamics, 0, state, step_params, dt)
+            next_state = integrator(model.dynamics, 0, state, dt, step_params)
             t_clock += dt
             t_all.append(t_clock)
             state_all.append(next_state)

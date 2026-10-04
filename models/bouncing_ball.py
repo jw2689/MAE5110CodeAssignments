@@ -22,6 +22,11 @@ def generate_params():
     return params
 
 
+def generate_initial_condition():
+    """Dropped from rest at 1 m."""
+    return np.array([1.0, 0.0])
+
+
 def apply_bounce(state, params):
     """Check for floor collision and reflect velocity if needed.
 

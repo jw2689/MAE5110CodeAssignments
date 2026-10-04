@@ -20,7 +20,7 @@ state_traj[:, 0] = initial_state
 # simulation loop
 for step, t in enumerate(time_traj[:-1]):
     next_state = integrator(
-        model.dynamics, t, state_traj[:, step], params, timestep
+        model.dynamics, t, state_traj[:, step], timestep, params
     )
     next_state = model.apply_bounce(next_state, params)  # <-- collision check
     state_traj[:, step + 1] = next_state
